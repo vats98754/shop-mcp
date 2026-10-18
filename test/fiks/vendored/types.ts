@@ -111,8 +111,17 @@ export interface Recording {
   http: HttpExchange[];
   probe?: { tool: string; args: Record<string, unknown>; result?: ToolResultLike; http: HttpExchange[] };
   vendorVersionHeader?: string;
-  /** For traces: the contract properties this call violated. Stored-trace tests assert exactly these. */
+  /** For traces: every contract property this call violated when it was captured. */
   violated?: Violation[];
-  /** Which upstream environment produced the recording; re-recording uses the same one. */
-  upstream?: { version: string; drifts?: string[] };
+  /**
+   * For traces: the violated properties this trace is about (what its fix must repair).
+   * Other properties violated at capture (other faults, fixed elsewhere) are not asserted;
+   * every property that held at capture must still hold. Default: all of `violated`.
+   */
+  target?: string[];
+  /**
+   * Which upstream environment produced the recording; re-recording uses the same one.
+   * `clock` is the upstream's frozen time, so a re-recording returns the same timestamps.
+   */
+  upstream?: { version: string; drifts?: string[]; clock?: string };
 }

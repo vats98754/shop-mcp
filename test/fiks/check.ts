@@ -4,7 +4,8 @@
 // A recording "applies" when the current code makes only upstream requests it holds. When a
 // fix legitimately changes the upstream requests (sends a new header, fetches the next page),
 // the recording no longer applies; fiks then re-records the same call against the same
-// upstream into `<name>.rerecorded.json`, and that recording must apply and pass.
+// upstream (same version, behavior and frozen clock) into `<name>.rerecorded.json`, and that
+// recording must apply and pass instead.
 import { existsSync, readFileSync } from 'node:fs';
 import { expect } from 'vitest';
 import { type Replayed, replayRecording } from './run.ts';
@@ -15,10 +16,20 @@ export const isRerecording = (file: string) => file.endsWith('.rerecorded.json')
 export const loadRecording = (file: string) => JSON.parse(readFileSync(file, 'utf8')) as Recording;
 
 export interface HoldsOptions {
-  /** Assert only these contract properties (repro tests, stored traces). Default: all. */
-  propertyIds?: string[];
-  /** Known-good fixture: when it applies, the output must equal the recorded output. */
+  /** Contract properties not to assert (faults outside this recording's scope). */
+  ignore?: string[];
+  /**
+   * Known-good fixture: the output must equal the recorded output. A re-recording is
+   * compared against the original fixture's output, so re-recording never hides a change.
+   */
   golden?: boolean;
+}
+
+/** For a stored trace: properties it violated that are not its target (fixed elsewhere). */
+export function outOfScope(rec: Recording): string[] {
+  const violated = (rec.violated ?? []).map((v) => v.propertyId);
+  const target = rec.target ?? violated;
+  return violated.filter((p) => !target.includes(p));
 }
 
 export async function expectRecordingHolds(file: string, opts: HoldsOptions = {}): Promise<Replayed> {
@@ -36,16 +47,17 @@ export async function expectRecordingHolds(file: string, opts: HoldsOptions = {}
     r = await replayRecording(loadRecording(alt));
     used = alt;
     expect(r.unmatched, `UNMATCHED_REQUEST in ${used}`).toEqual([]);
-  } else if (opts.golden && rec.result?.structuredContent) {
-    expect(r.result.structuredContent, `golden output changed (${file})`).toEqual(
+  }
+  if (opts.golden && rec.result?.structuredContent) {
+    expect(r.result.structuredContent, `golden output changed (${used} vs ${file})`).toEqual(
       rec.result.structuredContent,
     );
   }
-  const only = opts.propertyIds;
-  const label = only?.length ? only.join(', ') : 'contract';
+  const ignore = opts.ignore ?? [];
   const violations = r.evaluation.violations
-    .filter((v) => !only?.length || only.includes(v.propertyId))
+    .filter((v) => !ignore.includes(v.propertyId))
     .map((v) => `${v.propertyId}: ${v.message}`);
+  const label = violations.length ? violations.map((v) => v.split(':')[0]).join(', ') : 'contract';
   expect(violations, `${label} violated (${used})`).toEqual([]);
   return r;
 }

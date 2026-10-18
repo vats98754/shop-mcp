@@ -1,6 +1,6 @@
 {
   "id": "v1-order-o-5001",
-  "capturedAt": "2026-10-18T07:57:16.711Z",
+  "capturedAt": "2026-10-18T08:03:51.925Z",
   "tool": "get_order",
   "args": {
     "order_id": "o-5001"
@@ -9,7 +9,7 @@
     "content": [
       {
         "type": "text",
-        "text": "{\"order_id\":\"o-5001\",\"status\":\"confirmed\",\"items\":[{\"product_id\":\"p-1005\",\"quantity\":2,\"unit_price\":329}],\"total\":658,\"created_at\":\"2026-10-16T07:57:15.631Z\"}"
+        "text": "{\"order_id\":\"o-5001\",\"status\":\"confirmed\",\"items\":[{\"product_id\":\"p-1005\",\"quantity\":2,\"unit_price\":329}],\"total\":658,\"created_at\":\"2026-10-16T08:03:51.925Z\"}"
       }
     ],
     "structuredContent": {
@@ -23,13 +23,13 @@
         }
       ],
       "total": 658,
-      "created_at": "2026-10-16T07:57:15.631Z"
+      "created_at": "2026-10-16T08:03:51.925Z"
     }
   },
   "http": [
     {
       "seq": 10,
-      "startedAt": "2026-10-18T07:57:16.711Z",
+      "startedAt": "2026-10-18T08:03:52.458Z",
       "durationMs": 1,
       "request": {
         "method": "GET",
@@ -49,13 +49,14 @@
           "content-type": "application/json",
           "vendor-api-version": "2026-01-01"
         },
-        "body": "{\"id\":\"o-5001\",\"status\":\"confirmed\",\"items\":[{\"product_id\":\"p-1005\",\"quantity\":2,\"unit_price\":329}],\"total\":658,\"created_at\":\"2026-10-16T07:57:15.631Z\"}"
+        "body": "{\"id\":\"o-5001\",\"status\":\"confirmed\",\"items\":[{\"product_id\":\"p-1005\",\"quantity\":2,\"unit_price\":329}],\"total\":658,\"created_at\":\"2026-10-16T08:03:51.925Z\"}"
       }
     }
   ],
   "vendorVersionHeader": "2026-01-01",
   "upstream": {
     "version": "v1",
-    "drifts": []
+    "drifts": [],
+    "clock": "2026-10-18T08:03:51.925Z"
   }
 }

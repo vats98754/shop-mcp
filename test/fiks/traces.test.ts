@@ -1,8 +1,8 @@
-// Stored traces: real violations fiks captured. Once a trace is fixed, the properties it
-// violated must stay fixed.
+// Stored traces: real violations fiks captured. Once a trace is fixed it must stay fixed, and
+// every property that held when it was captured must still hold.
 import { relative } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { expectRecordingHolds, isRerecording, loadRecording } from './check.ts';
+import { expectRecordingHolds, isRerecording, loadRecording, outOfScope } from './check.ts';
 import { recordingFiles } from './run.ts';
 
 const root = new URL('../..', import.meta.url).pathname;
@@ -16,8 +16,7 @@ describe('fiks stored traces', () => {
   });
   for (const file of traces) {
     test(relative(root, file), async () => {
-      const propertyIds = loadRecording(file).violated?.map((v) => v.propertyId);
-      await expectRecordingHolds(file, { propertyIds });
+      await expectRecordingHolds(file, { ignore: outOfScope(loadRecording(file)) });
     });
   }
 });

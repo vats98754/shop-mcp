@@ -1,0 +1,52 @@
+{
+  "id": "v1-product-p-1001",
+  "capturedAt": "2026-10-18T07:42:10.271Z",
+  "tool": "get_product",
+  "args": {
+    "id": "p-1001"
+  },
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"id\":\"p-1001\",\"name\":\"Aero 14 Laptop\",\"category\":\"laptop\",\"price\":1199,\"currency\":\"USD\",\"in_stock\":true}"
+      }
+    ],
+    "structuredContent": {
+      "id": "p-1001",
+      "name": "Aero 14 Laptop",
+      "category": "laptop",
+      "price": 1199,
+      "currency": "USD",
+      "in_stock": true
+    }
+  },
+  "http": [
+    {
+      "seq": 4,
+      "startedAt": "2026-10-18T07:42:10.272Z",
+      "durationMs": 1,
+      "request": {
+        "method": "GET",
+        "url": "/products/p-1001",
+        "headers": {
+          "accept": "*/*",
+          "accept-language": "*",
+          "sec-fetch-mode": "cors",
+          "user-agent": "node",
+          "accept-encoding": "gzip, deflate"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "vendor-api-version": "2026-01-01"
+        },
+        "body": "{\"id\":\"p-1001\",\"name\":\"Aero 14 Laptop\",\"category\":\"laptop\",\"currency\":\"USD\",\"stock\":12,\"price\":1199}"
+      }
+    }
+  ],
+  "vendorVersionHeader": "2026-01-01"
+}

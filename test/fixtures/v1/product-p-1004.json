@@ -1,0 +1,52 @@
+{
+  "id": "v1-product-p-1004",
+  "capturedAt": "2026-10-18T07:42:10.274Z",
+  "tool": "get_product",
+  "args": {
+    "id": "p-1004"
+  },
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"id\":\"p-1004\",\"name\":\"Nimbus 15 Laptop\",\"category\":\"laptop\",\"price\":749.5,\"currency\":\"USD\",\"in_stock\":true}"
+      }
+    ],
+    "structuredContent": {
+      "id": "p-1004",
+      "name": "Nimbus 15 Laptop",
+      "category": "laptop",
+      "price": 749.5,
+      "currency": "USD",
+      "in_stock": true
+    }
+  },
+  "http": [
+    {
+      "seq": 5,
+      "startedAt": "2026-10-18T07:42:10.275Z",
+      "durationMs": 0,
+      "request": {
+        "method": "GET",
+        "url": "/products/p-1004",
+        "headers": {
+          "accept": "*/*",
+          "accept-language": "*",
+          "sec-fetch-mode": "cors",
+          "user-agent": "node",
+          "accept-encoding": "gzip, deflate"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "vendor-api-version": "2026-01-01"
+        },
+        "body": "{\"id\":\"p-1004\",\"name\":\"Nimbus 15 Laptop\",\"category\":\"laptop\",\"currency\":\"USD\",\"stock\":18,\"price\":749.5}"
+      }
+    }
+  ],
+  "vendorVersionHeader": "2026-01-01"
+}

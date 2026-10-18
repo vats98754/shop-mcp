@@ -40,11 +40,13 @@ interface VendorProduct {
 export async function handler(args: { query: string }, vendor: VendorClient) {
   const res = await vendor.get(`/products?q=${encodeURIComponent(args.query)}`);
   const body = res.body as { items: VendorProduct[]; total: number };
+  // Since vendor API 2026-10-01, prices are sent in minor units (cents).
+  const priceScale = (res.headers.get('vendor-api-version') ?? '') >= '2026-10-01' ? 100 : 1;
   const items = body.items.map((p) => ({
     id: p.id,
     name: p.name,
     category: p.category,
-    price: p.price,
+    price: p.price / priceScale,
     currency: p.currency,
   }));
   return ok({ items, count: items.length, total: body.total });

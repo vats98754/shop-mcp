@@ -2,7 +2,7 @@
 // every property that held when it was captured must still hold.
 import { relative } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { expectRecordingHolds, isRerecording, loadRecording, outOfScope } from './check.ts';
+import { expectRecordingHolds, isRerecording, loadRecording, outOfScope, targetOf } from './check.ts';
 import { recordingFiles } from './run.ts';
 
 const root = new URL('../..', import.meta.url).pathname;
@@ -16,7 +16,8 @@ describe('fiks stored traces', () => {
   });
   for (const file of traces) {
     test(relative(root, file), async () => {
-      await expectRecordingHolds(file, { ignore: outOfScope(loadRecording(file)) });
+      const rec = loadRecording(file);
+      await expectRecordingHolds(file, { ignore: outOfScope(rec), mustCheck: targetOf(rec) });
     });
   }
 });

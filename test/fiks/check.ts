@@ -18,11 +18,18 @@ export const loadRecording = (file: string) => JSON.parse(readFileSync(file, 'ut
 export interface HoldsOptions {
   /** Contract properties not to assert (faults outside this recording's scope). */
   ignore?: string[];
+  /** Contract properties that must actually be evaluated (a trace's target). */
+  mustCheck?: string[];
   /**
    * Known-good fixture: the output must equal the recorded output. A re-recording is
    * compared against the original fixture's output, so re-recording never hides a change.
    */
   golden?: boolean;
+}
+
+/** For a stored trace: the properties its fix must repair. */
+export function targetOf(rec: Recording): string[] {
+  return rec.target ?? (rec.violated ?? []).map((v) => v.propertyId);
 }
 
 /** For a stored trace: properties it violated that are not its target (fixed elsewhere). */
@@ -55,6 +62,15 @@ export async function expectRecordingHolds(file: string, opts: HoldsOptions = {}
     if (golden.isError) expect(r.result.content, label).toEqual(golden.content);
     else expect(r.result.structuredContent, label).toEqual(golden.structuredContent);
   }
+  // Refusing is not repairing: a call that returned data must still return data.
+  if (rec.result && !rec.result.isError) {
+    const text = (r.result.content as { text?: string }[] | undefined)?.map((c) => c.text).join(' ');
+    expect(Boolean(r.result.isError), `tool now returns an error instead of data (${used}): ${text}`).toBe(
+      false,
+    );
+  }
+  const unchecked = (opts.mustCheck ?? []).filter((p) => !r.evaluation.checked.includes(p));
+  expect(unchecked, `target properties were not evaluated (${used})`).toEqual([]);
   const ignore = opts.ignore ?? [];
   const violations = r.evaluation.violations
     .filter((v) => !ignore.includes(v.propertyId))

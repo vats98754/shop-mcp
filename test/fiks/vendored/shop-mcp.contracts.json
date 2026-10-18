@@ -21,6 +21,7 @@
           "totalPath": "total"
         },
         { "id": "total.equalsUpstream", "kind": "equalsUpstream", "path": "total", "upstreamPath": "total" },
+        { "id": "items.id.unique", "kind": "unique", "path": "items[*].id" },
         { "id": "items.nonEmpty", "kind": "nonEmpty", "path": "items", "onlyKnownGood": true }
       ],
       "knownGoodInputs": [{ "query": "laptop" }, { "query": "monitor" }, { "query": "cable" }]
@@ -78,6 +79,13 @@
           "path": "created_at",
           "maxAgeDays": 365,
           "maxFutureDays": 1
+        },
+        {
+          "id": "created_at.equalsUpstream",
+          "kind": "equalsUpstream",
+          "path": "created_at",
+          "upstreamPath": "created_at",
+          "compare": "instant"
         },
         { "id": "total.range", "kind": "range", "path": "total", "min": 0.5, "max": 100000, "unit": "USD" }
       ]

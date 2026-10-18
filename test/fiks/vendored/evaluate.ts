@@ -180,13 +180,28 @@ function checkInvariant(
       const want = getOne(upstream, inv.upstreamPath);
       if (want === undefined) return 'skip';
       const got = getOne(data, inv.path);
-      if (JSON.stringify(got) === JSON.stringify(want)) return null;
+      const same =
+        inv.compare === 'instant'
+          ? toTime(got) !== null && toTime(got) === toTime(want)
+          : JSON.stringify(got) === JSON.stringify(want);
+      if (same) return null;
       return v(
         inv.path,
         `${show(want)} (upstream ${inv.upstreamPath})`,
         got,
         `${inv.path} = ${show(got)} but upstream ${inv.upstreamPath} = ${show(want)}`,
       );
+    }
+    case 'unique': {
+      const seen = new Map<string, string>();
+      for (const { at, value } of select(data, inv.path)) {
+        const key = JSON.stringify(value);
+        const first = seen.get(key);
+        if (first !== undefined)
+          return v(at, 'unique values', value, `${at} = ${show(value)} repeats ${first}`);
+        seen.set(key, at);
+      }
+      return null;
     }
     case 'freshness': {
       const now = input.now.getTime();

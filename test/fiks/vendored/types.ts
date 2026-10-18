@@ -13,8 +13,14 @@ export type Invariant =
   | { id: string; kind: 'nonEmpty'; path: Path; onlyKnownGood?: boolean }
   | { id: string; kind: 'countMatchesTotal'; itemsPath: Path; totalPath: Path }
   | { id: string; kind: 'freshness'; path: Path; maxAgeDays: number; maxFutureDays?: number }
-  /** The tool must report what the upstream said: `path` equals `upstreamPath` in the first upstream JSON response. */
-  | { id: string; kind: 'equalsUpstream'; path: Path; upstreamPath: Path };
+  /**
+   * The tool must report what the upstream said: `path` equals `upstreamPath` in the first
+   * upstream JSON response. `compare: 'instant'` compares timestamps (ISO-8601 or epoch ms)
+   * as the same point in time.
+   */
+  | { id: string; kind: 'equalsUpstream'; path: Path; upstreamPath: Path; compare?: 'json' | 'instant' }
+  /** No two values at `path` are equal (e.g. no duplicated items). */
+  | { id: string; kind: 'unique'; path: Path };
 
 /** After a mutating call, call `probeTool` and check that it reads back what was written. */
 export interface ReadAfterWrite {

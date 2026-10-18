@@ -48,10 +48,12 @@ export async function expectRecordingHolds(file: string, opts: HoldsOptions = {}
     used = alt;
     expect(r.unmatched, `UNMATCHED_REQUEST in ${used}`).toEqual([]);
   }
-  if (opts.golden && rec.result?.structuredContent) {
-    expect(r.result.structuredContent, `golden output changed (${used} vs ${file})`).toEqual(
-      rec.result.structuredContent,
-    );
+  if (opts.golden && rec.result) {
+    const golden = rec.result;
+    const label = `golden output changed (${used} vs ${file})`;
+    expect(Boolean(r.result.isError), label).toBe(Boolean(golden.isError));
+    if (golden.isError) expect(r.result.content, label).toEqual(golden.content);
+    else expect(r.result.structuredContent, label).toEqual(golden.structuredContent);
   }
   const ignore = opts.ignore ?? [];
   const violations = r.evaluation.violations

@@ -3,6 +3,7 @@
 import { type Dirent, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { vi } from 'vitest';
 import { z } from 'zod';
 import * as handlers from '../../src/tools/handlers.ts';
 import { createVendorClient } from '../../src/vendor.ts';
@@ -12,6 +13,12 @@ import contractsJson from './vendored/shop-mcp.contracts.json' with { type: 'jso
 import type { ContractFile, EvalResult, JsonSchema, Recording } from './vendored/types.ts';
 
 export const CONTRACTS = contractsJson as ContractFile;
+
+/**
+ * During a replay the process clock reads 10 years after capture. Contracts are evaluated at
+ * `capturedAt`, so a tool that invents "now" instead of reporting upstream data is caught.
+ */
+const CLOCK_SKEW_MS = 10 * 365 * 86_400_000;
 
 interface ToolModule {
   name: string;
@@ -57,6 +64,7 @@ export async function replayRecording(rec: Recording): Promise<Replayed> {
     let result: CallToolResult;
     let probe: Replayed['probe'];
     let upstream: typeof replay.served;
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.parse(rec.capturedAt) + CLOCK_SKEW_MS });
     try {
       result = await tool(rec.tool).handler(rec.args as never, vendor);
       upstream = [...replay.served];
@@ -77,6 +85,8 @@ export async function replayRecording(rec: Recording): Promise<Replayed> {
         };
       }
       throw e;
+    } finally {
+      vi.useRealTimers();
     }
     const evaluation = evaluate(contract, {
       args: rec.args,

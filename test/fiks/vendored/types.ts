@@ -12,7 +12,9 @@ export type Invariant =
   | { id: string; kind: 'notNull'; path: Path; onlyKnownGood?: boolean }
   | { id: string; kind: 'nonEmpty'; path: Path; onlyKnownGood?: boolean }
   | { id: string; kind: 'countMatchesTotal'; itemsPath: Path; totalPath: Path }
-  | { id: string; kind: 'freshness'; path: Path; maxAgeDays: number; maxFutureDays?: number };
+  | { id: string; kind: 'freshness'; path: Path; maxAgeDays: number; maxFutureDays?: number }
+  /** The tool must report what the upstream said: `path` equals `upstreamPath` in the first upstream JSON response. */
+  | { id: string; kind: 'equalsUpstream'; path: Path; upstreamPath: Path };
 
 /** After a mutating call, call `probeTool` and check that it reads back what was written. */
 export interface ReadAfterWrite {
@@ -85,6 +87,8 @@ export interface EvalInput {
   declaredOutputSchema?: JsonSchema;
   /** Result of the read-after-write probe, when the contract declares one. */
   probe?: { tool: string; args: unknown; result: ToolResultLike };
+  /** Upstream HTTP exchanges caused by this call, in order (for `equalsUpstream`). */
+  upstream?: HttpExchange[];
 }
 
 /** One upstream HTTP request/response pair, recorded by the fiks HTTP tap. */
@@ -107,4 +111,8 @@ export interface Recording {
   http: HttpExchange[];
   probe?: { tool: string; args: Record<string, unknown>; result?: ToolResultLike; http: HttpExchange[] };
   vendorVersionHeader?: string;
+  /** For traces: the contract properties this call violated. Stored-trace tests assert exactly these. */
+  violated?: Violation[];
+  /** Which upstream environment produced the recording; re-recording uses the same one. */
+  upstream?: { version: string; drifts?: string[] };
 }

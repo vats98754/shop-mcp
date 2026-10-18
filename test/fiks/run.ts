@@ -37,25 +37,46 @@ export interface Replayed {
   result: CallToolResult;
   probe?: { tool: string; args: Record<string, unknown>; result: CallToolResult };
   evaluation: EvalResult;
+  /** Requests the current code made that the recording does not hold. */
   unmatched: string[];
 }
 
-/** Replays `rec` through the current tool code and evaluates its contract at `capturedAt`. */
+const EMPTY: EvalResult = { verdict: 'unverifiable', contractId: null, checked: [], violations: [] };
+
+/**
+ * Replays `rec` through the current tool code and evaluates its contract at `capturedAt`.
+ * If the code makes an unrecorded request, the recording does not apply to this code:
+ * that is reported through `unmatched` (even if the code then throws on the 599).
+ */
 export async function replayRecording(rec: Recording): Promise<Replayed> {
   const replay = await startReplay([...rec.http, ...(rec.probe?.http ?? [])]);
   try {
     const vendor = createVendorClient(replay.url);
-    const result = await tool(rec.tool).handler(rec.args as never, vendor);
     const contract = findContract(CONTRACTS, rec.tool);
-    let probe: Replayed['probe'];
     const post = contract?.postconditions?.[0];
-    if (post && result.structuredContent && !result.isError) {
-      const args = buildProbeArgs(post, result.structuredContent);
-      probe = {
-        tool: post.probeTool,
-        args,
-        result: await tool(post.probeTool).handler(args as never, vendor),
-      };
+    let result: CallToolResult;
+    let probe: Replayed['probe'];
+    let upstream: typeof replay.served;
+    try {
+      result = await tool(rec.tool).handler(rec.args as never, vendor);
+      upstream = [...replay.served];
+      if (post && result.structuredContent && !result.isError) {
+        const args = buildProbeArgs(post, result.structuredContent);
+        probe = {
+          tool: post.probeTool,
+          args,
+          result: await tool(post.probeTool).handler(args as never, vendor),
+        };
+      }
+    } catch (e) {
+      if (replay.unmatched.length > 0) {
+        return {
+          result: { content: [], isError: true },
+          evaluation: EMPTY,
+          unmatched: [...replay.unmatched],
+        };
+      }
+      throw e;
     }
     const evaluation = evaluate(contract, {
       args: rec.args,
@@ -63,6 +84,7 @@ export async function replayRecording(rec: Recording): Promise<Replayed> {
       now: new Date(rec.capturedAt),
       declaredOutputSchema: declaredOutputSchema(rec.tool),
       probe,
+      upstream,
     });
     return { result, probe, evaluation, unmatched: [...replay.unmatched] };
   } finally {

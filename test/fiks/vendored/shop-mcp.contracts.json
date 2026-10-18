@@ -10,7 +10,7 @@
           "id": "items.price.range",
           "kind": "range",
           "path": "items[*].price",
-          "min": 0.5,
+          "min": 20,
           "max": 2000,
           "unit": "USD"
         },
@@ -20,6 +20,7 @@
           "itemsPath": "items",
           "totalPath": "total"
         },
+        { "id": "total.equalsUpstream", "kind": "equalsUpstream", "path": "total", "upstreamPath": "total" },
         { "id": "items.nonEmpty", "kind": "nonEmpty", "path": "items", "onlyKnownGood": true }
       ],
       "knownGoodInputs": [{ "query": "laptop" }, { "query": "monitor" }, { "query": "cable" }]
@@ -29,7 +30,7 @@
       "tool": "get_product",
       "invariants": [
         { "id": "price.notNull", "kind": "notNull", "path": "price", "onlyKnownGood": true },
-        { "id": "price.range", "kind": "range", "path": "price", "min": 0.5, "max": 2000, "unit": "USD" }
+        { "id": "price.range", "kind": "range", "path": "price", "min": 20, "max": 2000, "unit": "USD" }
       ],
       "knownGoodInputs": [
         { "id": "p-1001" },

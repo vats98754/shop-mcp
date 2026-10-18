@@ -168,6 +168,26 @@ function checkInvariant(
         `returned ${items.length} of ${total} matching items`,
       );
     }
+    case 'equalsUpstream': {
+      const first = input.upstream?.[0];
+      if (!first) return 'skip';
+      let upstream: unknown;
+      try {
+        upstream = JSON.parse(first.response.body);
+      } catch {
+        return 'skip';
+      }
+      const want = getOne(upstream, inv.upstreamPath);
+      if (want === undefined) return 'skip';
+      const got = getOne(data, inv.path);
+      if (JSON.stringify(got) === JSON.stringify(want)) return null;
+      return v(
+        inv.path,
+        `${show(want)} (upstream ${inv.upstreamPath})`,
+        got,
+        `${inv.path} = ${show(got)} but upstream ${inv.upstreamPath} = ${show(want)}`,
+      );
+    }
     case 'freshness': {
       const now = input.now.getTime();
       const lo = now - inv.maxAgeDays * DAY_MS;

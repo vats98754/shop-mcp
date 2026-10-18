@@ -32,6 +32,8 @@ export interface Replay {
   url: string;
   /** Requests that matched no recording. */
   unmatched: string[];
+  /** Recorded exchanges that were served, in request order. */
+  served: HttpExchange[];
   close(): Promise<void>;
 }
 
@@ -40,6 +42,7 @@ export async function startReplay(exchanges: HttpExchange[]): Promise<Replay> {
     .sort((a, b) => a.seq - b.seq)
     .map((e) => ({ e, key: requestKey(e.request.method, e.request.url, e.request.body, e.request.headers) }));
   const unmatched: string[] = [];
+  const served: HttpExchange[] = [];
   const server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on('data', (c: Buffer) => chunks.push(c));
@@ -54,6 +57,7 @@ export async function startReplay(exchanges: HttpExchange[]): Promise<Replay> {
         return;
       }
       const { e } = pending.splice(i, 1)[0] as { e: HttpExchange };
+      served.push(e);
       res.writeHead(e.response.status, e.response.headers);
       res.end(e.response.body);
     });
@@ -62,6 +66,7 @@ export async function startReplay(exchanges: HttpExchange[]): Promise<Replay> {
   return {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     unmatched,
+    served,
     close: () =>
       new Promise((r) => {
         server.closeAllConnections();

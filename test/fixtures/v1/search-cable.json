@@ -1,6 +1,6 @@
 {
   "id": "v1-search-cable",
-  "capturedAt": "2026-10-18T07:42:10.261Z",
+  "capturedAt": "2026-10-18T07:57:16.660Z",
   "tool": "search_products",
   "args": {
     "query": "cable"
@@ -71,8 +71,8 @@
   "http": [
     {
       "seq": 1,
-      "startedAt": "2026-10-18T07:42:10.262Z",
-      "durationMs": 1,
+      "startedAt": "2026-10-18T07:57:16.662Z",
+      "durationMs": 2,
       "request": {
         "method": "GET",
         "url": "/products?q=cable",
@@ -95,5 +95,9 @@
       }
     }
   ],
-  "vendorVersionHeader": "2026-01-01"
+  "vendorVersionHeader": "2026-01-01",
+  "upstream": {
+    "version": "v1",
+    "drifts": []
+  }
 }

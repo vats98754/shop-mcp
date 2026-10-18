@@ -16,7 +16,7 @@ describe('fiks contract suite', () => {
   });
   for (const file of fixtures) {
     test(relative(root, file), async () => {
-      await expectRecordingHolds(file);
+      await expectRecordingHolds(file, { golden: true });
     });
   }
 });

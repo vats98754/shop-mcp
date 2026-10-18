@@ -60,6 +60,45 @@ export function buildProbeArgs(post: ReadAfterWrite, structured: unknown): Recor
   return out;
 }
 
+/** The value at a concrete location such as `items[3].price`. */
+function lookup(root: unknown, at: string): unknown {
+  let cur: unknown = root;
+  for (const part of at.split('.')) {
+    const m = /^([^[]*)((?:\[\d+\])*)$/.exec(part);
+    if (!m) return undefined;
+    if (m[1])
+      cur = cur !== null && typeof cur === 'object' ? (cur as Record<string, unknown>)[m[1]] : undefined;
+    for (const idx of (m[2] ?? '').match(/\d+/g) ?? [])
+      cur = Array.isArray(cur) ? cur[Number(idx)] : undefined;
+  }
+  return cur;
+}
+
+/** `items[3].price` -> the item's id when it has one (`p-1001`), else the location itself. */
+function label(root: unknown, at: string): string {
+  const dot = at.lastIndexOf('.');
+  if (dot === -1) return at;
+  const parent = lookup(root, at.slice(0, dot));
+  const id =
+    parent !== null && typeof parent === 'object' ? (parent as Record<string, unknown>).id : undefined;
+  return typeof id === 'string' || typeof id === 'number' ? String(id) : at;
+}
+
+const dateOnly = (v: unknown) => {
+  const t = toTime(v);
+  return t === null ? show(v) : new Date(t).toISOString().slice(0, 10);
+};
+const toMinute = (v: unknown) => {
+  const t = toTime(v);
+  return t === null ? show(v) : `${new Date(t).toISOString().slice(0, 16)}Z`;
+};
+
+/** Arguments as plain words: `{"id":"p-1001"}` -> `p-1001`. */
+const argText = (args: unknown) =>
+  args !== null && typeof args === 'object'
+    ? Object.values(args).map(show).join(', ').replace(/"/g, '')
+    : show(args);
+
 function show(v: unknown): string {
   return v === undefined ? 'undefined' : JSON.stringify(v);
 }
@@ -148,7 +187,7 @@ function checkInvariant(
       const message =
         values.length === 1
           ? `${first.at} = ${first.value} is outside ${expected}`
-          : `${bad.length} of ${values.length} ${field}s outside ${expected} (${first.at} = ${first.value})`;
+          : `${bad.length} of ${values.length} ${field}s outside ${expected} (${label(data, first.at)} = ${first.value})`;
       return v(first.at, expected, first.value, message);
     }
     case 'notNull':
@@ -160,7 +199,7 @@ function checkInvariant(
             at,
             'not null',
             value ?? null,
-            `${at} is null, but it should be set for ${show(input.args)}`,
+            `${at} is null, but ${argText(input.args)} should have one`,
           );
         }
         if (inv.kind === 'nonEmpty' && (!Array.isArray(value) || value.length === 0)) {
@@ -168,7 +207,7 @@ function checkInvariant(
             at,
             'non-empty array',
             value,
-            `${at} is empty, but ${show(input.args)} should have results`,
+            `${at} is empty, but ${argText(input.args)} should have results`,
           );
         }
       }
@@ -183,7 +222,7 @@ function checkInvariant(
         inv.itemsPath,
         `${inv.itemsPath}.length == ${inv.totalPath} (${total})`,
         items.length,
-        `incomplete: ${items.length} of ${total} matches returned`,
+        `list is incomplete, ${items.length} of ${total} matches returned`,
       );
     }
     case 'equalsUpstream': {
@@ -207,7 +246,9 @@ function checkInvariant(
         inv.path,
         `${show(want)} (upstream ${inv.upstreamPath})`,
         got,
-        `${inv.path} = ${show(got)} but upstream sent ${inv.compare === 'instant' && toTime(want) !== null ? new Date(toTime(want) as number).toISOString() : show(want)}`,
+        inv.compare === 'instant'
+          ? `${inv.path} shows ${dateOnly(got)} but upstream sent ${toMinute(want)}`
+          : `${inv.path} = ${show(got)} but upstream sent ${show(want)}`,
       );
     }
     case 'unique': {
@@ -232,7 +273,7 @@ function checkInvariant(
         if (t < lo || t > hi) {
           const days = Math.round((now - t) / DAY_MS);
           const when = days >= 0 ? `${days} days old` : `${-days} days in the future`;
-          return v(at, expected, value, `${at} = ${show(value)} is ${when}`);
+          return v(at, expected, value, `${at} shows ${dateOnly(value)}, ${when}`);
         }
       }
       return null;
@@ -260,7 +301,7 @@ function checkReadAfterWrite(
       ...base,
       expected: 'probe reads back the write',
       actual: probe.result.isError ? 'error' : 'no structuredContent',
-      message: `write not readable: ${post.probeTool} ${args} returned ${probe.result.isError ? 'an error' : 'no data'}`,
+      message: `not found on read-back: ${post.probeTool} ${args} returned ${probe.result.isError ? 'an error' : 'no data'}`,
     };
   }
   if (post.upstream && probe.upstream) {
@@ -308,7 +349,28 @@ export function evaluate(contract: ToolContract | undefined, input: EvalInput): 
   // An explicit tool error is not a silent failure; the agent already sees it.
   if (input.result.isError) return empty;
   const data = input.result.structuredContent;
-  if (!data) return empty;
+  if (!data) {
+    // MCP: a tool that declares an outputSchema must return structuredContent.
+    if (contract.outputSchema ?? input.declaredOutputSchema) {
+      const propertyId = `${contract.id}/outputSchema`;
+      return {
+        verdict: 'violated',
+        contractId: contract.id,
+        checked: [propertyId],
+        violations: [
+          {
+            propertyId,
+            kind: 'outputSchema',
+            path: '$',
+            expected: 'structuredContent',
+            actual: null,
+            message: 'no structured result, though the tool declares an output schema',
+          },
+        ],
+      };
+    }
+    return empty;
+  }
 
   const checked: string[] = [];
   const violations: Violation[] = [];

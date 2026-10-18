@@ -51,7 +51,15 @@ export async function expectRecordingHolds(file: string, opts: HoldsOptions = {}
           `(${r.unmatched.join('; ')}). If this is intended, re-record it with \`fiks rerecord\`.`,
       );
     }
-    r = await replayRecording(loadRecording(alt));
+    const altRec = loadRecording(alt);
+    // A re-recording stands in for the original only if it is the same call against the same
+    // upstream: same tool, arguments, upstream profile (version, behavior, clock) and version.
+    const same = (x: Recording) =>
+      JSON.stringify([x.tool, x.args, x.upstream ?? null, x.vendorVersionHeader ?? null]);
+    expect(same(altRec), `re-recording does not match the original call and upstream (${alt})`).toBe(
+      same(rec),
+    );
+    r = await replayRecording(altRec);
     used = alt;
     expect(r.unmatched, `UNMATCHED_REQUEST in ${used}`).toEqual([]);
   }

@@ -29,6 +29,12 @@ export interface ReadAfterWrite {
   /** Probe argument name -> path into the mutating call's structured result. */
   probeArgs: Record<string, Path>;
   expect: { probePath: Path; equalsResultPath: Path }[];
+  /**
+   * The read-back must come from the upstream, not from the tool's own memory: some upstream
+   * response during the probe is 2xx and its JSON `idPath` equals the write's `equalsResultPath`.
+   * Checked whenever the probe's upstream exchanges are known.
+   */
+  upstream?: { idPath: Path; equalsResultPath: Path };
 }
 
 export interface ToolContract {
@@ -92,7 +98,7 @@ export interface EvalInput {
   /** The tool's declared outputSchema from tools/list (MCP 2025-11-25). */
   declaredOutputSchema?: JsonSchema;
   /** Result of the read-after-write probe, when the contract declares one. */
-  probe?: { tool: string; args: unknown; result: ToolResultLike };
+  probe?: { tool: string; args: unknown; result: ToolResultLike; upstream?: HttpExchange[] };
   /** Upstream HTTP exchanges caused by this call, in order (for `equalsUpstream`). */
   upstream?: HttpExchange[];
 }

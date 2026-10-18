@@ -10,7 +10,7 @@ import { createVendorClient } from '../../src/vendor.ts';
 import { startReplay } from './replay.ts';
 import { buildProbeArgs, evaluate, findContract } from './vendored/evaluate.ts';
 import contractsJson from './vendored/shop-mcp.contracts.json' with { type: 'json' };
-import type { ContractFile, EvalResult, JsonSchema, Recording } from './vendored/types.ts';
+import type { ContractFile, EvalResult, HttpExchange, JsonSchema, Recording } from './vendored/types.ts';
 
 export const CONTRACTS = contractsJson as ContractFile;
 
@@ -42,7 +42,7 @@ export function declaredOutputSchema(name: string): JsonSchema {
 
 export interface Replayed {
   result: CallToolResult;
-  probe?: { tool: string; args: Record<string, unknown>; result: CallToolResult };
+  probe?: { tool: string; args: Record<string, unknown>; result: CallToolResult; upstream: HttpExchange[] };
   evaluation: EvalResult;
   /** Requests the current code made that the recording does not hold. */
   unmatched: string[];
@@ -70,11 +70,9 @@ export async function replayRecording(rec: Recording): Promise<Replayed> {
       upstream = [...replay.served];
       if (post && result.structuredContent && !result.isError) {
         const args = buildProbeArgs(post, result.structuredContent);
-        probe = {
-          tool: post.probeTool,
-          args,
-          result: await tool(post.probeTool).handler(args as never, vendor),
-        };
+        const before = replay.served.length;
+        const probeResult = await tool(post.probeTool).handler(args as never, vendor);
+        probe = { tool: post.probeTool, args, result: probeResult, upstream: replay.served.slice(before) };
       }
     } catch (e) {
       if (replay.unmatched.length > 0) {

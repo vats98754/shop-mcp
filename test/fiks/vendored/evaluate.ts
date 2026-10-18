@@ -242,6 +242,28 @@ function checkReadAfterWrite(
       message: `write not readable: ${post.probeTool}(${args}) returned ${probe.result.isError ? 'an error' : 'no data'}`,
     };
   }
+  if (post.upstream && probe.upstream) {
+    const want = getOne(data, post.upstream.equalsResultPath);
+    const idPath = post.upstream.idPath;
+    const confirmed = probe.upstream.some((x) => {
+      if (x.response.status < 200 || x.response.status > 299) return false;
+      try {
+        return JSON.stringify(getOne(JSON.parse(x.response.body), idPath)) === JSON.stringify(want);
+      } catch {
+        return false;
+      }
+    });
+    if (!confirmed) {
+      const statuses = probe.upstream.map((x) => x.response.status).join(',') || 'none';
+      return {
+        ...base,
+        path: idPath,
+        expected: `upstream 2xx with ${idPath} = ${show(want)}`,
+        actual: statuses,
+        message: `write not confirmed by upstream: ${post.probeTool}(${args}) upstream status ${statuses}`,
+      };
+    }
+  }
   for (const e of post.expect) {
     const got = getOne(probe.result.structuredContent, e.probePath);
     const want = getOne(data, e.equalsResultPath);

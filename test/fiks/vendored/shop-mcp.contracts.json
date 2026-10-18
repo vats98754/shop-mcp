@@ -62,6 +62,7 @@
           "id": "readAfterWrite",
           "probeTool": "get_order",
           "probeArgs": { "order_id": "order_id" },
+          "upstream": { "idPath": "id", "equalsResultPath": "order_id" },
           "expect": [
             { "probePath": "order_id", "equalsResultPath": "order_id" },
             { "probePath": "total", "equalsResultPath": "total" }

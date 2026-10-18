@@ -134,24 +134,42 @@ function checkInvariant(
   switch (inv.kind) {
     case 'range': {
       const unit = inv.unit ? ` ${inv.unit}` : '';
-      const expected = `${inv.min ?? '-inf'}..${inv.max ?? 'inf'}${unit}`;
-      for (const { at, value } of select(data, inv.path)) {
-        if (typeof value !== 'number') continue; // null/missing is notNull's job
-        if ((inv.min !== undefined && value < inv.min) || (inv.max !== undefined && value > inv.max)) {
-          return v(at, expected, value, `${at} = ${value} is outside ${expected}`);
-        }
-      }
-      return null;
+      const expected =
+        inv.max === undefined ? `at least ${inv.min}${unit}` : `${inv.min ?? '-inf'}-${inv.max}${unit}`;
+      const values = select(data, inv.path).filter((x) => typeof x.value === 'number'); // null is notNull's job
+      const bad = values.filter(
+        ({ value }) =>
+          (inv.min !== undefined && (value as number) < inv.min) ||
+          (inv.max !== undefined && (value as number) > inv.max),
+      );
+      const first = bad[0];
+      if (!first) return null;
+      const field = inv.path.split('.').pop() ?? inv.path;
+      const message =
+        values.length === 1
+          ? `${first.at} = ${first.value} is outside ${expected}`
+          : `${bad.length} of ${values.length} ${field}s outside ${expected} (${first.at} = ${first.value})`;
+      return v(first.at, expected, first.value, message);
     }
     case 'notNull':
     case 'nonEmpty': {
       if (inv.onlyKnownGood && !isKnownGood(c, input.args)) return 'skip';
       for (const { at, value } of select(data, inv.path)) {
         if (inv.kind === 'notNull' && (value === null || value === undefined)) {
-          return v(at, 'not null', value ?? null, `${at} is ${show(value ?? null)} for a known-good input`);
+          return v(
+            at,
+            'not null',
+            value ?? null,
+            `${at} is null, but it should be set for ${show(input.args)}`,
+          );
         }
         if (inv.kind === 'nonEmpty' && (!Array.isArray(value) || value.length === 0)) {
-          return v(at, 'non-empty array', value, `${at} is empty for a known-good input`);
+          return v(
+            at,
+            'non-empty array',
+            value,
+            `${at} is empty, but ${show(input.args)} should have results`,
+          );
         }
       }
       return null;
@@ -165,7 +183,7 @@ function checkInvariant(
         inv.itemsPath,
         `${inv.itemsPath}.length == ${inv.totalPath} (${total})`,
         items.length,
-        `returned ${items.length} of ${total} matching items`,
+        `incomplete: ${items.length} of ${total} matches returned`,
       );
     }
     case 'equalsUpstream': {
@@ -189,7 +207,7 @@ function checkInvariant(
         inv.path,
         `${show(want)} (upstream ${inv.upstreamPath})`,
         got,
-        `${inv.path} = ${show(got)} but upstream ${inv.upstreamPath} = ${show(want)}`,
+        `${inv.path} = ${show(got)} but upstream sent ${inv.compare === 'instant' && toTime(want) !== null ? new Date(toTime(want) as number).toISOString() : show(want)}`,
       );
     }
     case 'unique': {
@@ -213,7 +231,8 @@ function checkInvariant(
         if (t === null) return v(at, expected, value, `${at} = ${show(value)} is not a timestamp`);
         if (t < lo || t > hi) {
           const days = Math.round((now - t) / DAY_MS);
-          return v(at, expected, value, `${at} = ${show(value)} is ${days} days old (max ${inv.maxAgeDays})`);
+          const when = days >= 0 ? `${days} days old` : `${-days} days in the future`;
+          return v(at, expected, value, `${at} = ${show(value)} is ${when}`);
         }
       }
       return null;
@@ -233,13 +252,15 @@ function checkReadAfterWrite(
   if (!probe || probe.tool !== post.probeTool) {
     return { ...base, expected: 'probe result', actual: null, message: `no ${post.probeTool} probe ran` };
   }
-  const args = JSON.stringify(probe.args);
+  const args = Object.values((probe.args ?? {}) as Record<string, unknown>)
+    .map(String)
+    .join(', ');
   if (probe.result.isError || !probe.result.structuredContent) {
     return {
       ...base,
       expected: 'probe reads back the write',
       actual: probe.result.isError ? 'error' : 'no structuredContent',
-      message: `write not readable: ${post.probeTool}(${args}) returned ${probe.result.isError ? 'an error' : 'no data'}`,
+      message: `write not readable: ${post.probeTool} ${args} returned ${probe.result.isError ? 'an error' : 'no data'}`,
     };
   }
   if (post.upstream && probe.upstream) {
@@ -260,7 +281,7 @@ function checkReadAfterWrite(
         path: idPath,
         expected: `upstream 2xx with ${idPath} = ${show(want)}`,
         actual: statuses,
-        message: `write not confirmed by upstream: ${post.probeTool}(${args}) upstream status ${statuses}`,
+        message: `write not confirmed by upstream: ${post.probeTool} ${args} got upstream status ${statuses}`,
       };
     }
   }
@@ -273,7 +294,7 @@ function checkReadAfterWrite(
         path: e.probePath,
         expected: show(want),
         actual: got,
-        message: `${post.probeTool}(${args}).${e.probePath} = ${show(got)}, write returned ${show(want)}`,
+        message: `${post.probeTool} ${args} read back ${e.probePath} = ${show(got)}, write returned ${show(want)}`,
       };
     }
   }

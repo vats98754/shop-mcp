@@ -12,8 +12,14 @@ export const config = {
   outputSchema: {
     order_id: z.string(),
     status: z.string(),
-    items: z.array(z.object({ product_id: z.string(), quantity: z.number().int(), unit_price: z.number() })),
-    total: z.number(),
+    items: z.array(
+      z.object({
+        product_id: z.string(),
+        quantity: z.number().int(),
+        unit_price: z.number().describe('Unit price in US dollars.'),
+      }),
+    ),
+    total: z.number().describe('Order total in US dollars.'),
     created_at: z.string().describe('When the order was placed, ISO-8601 UTC.'),
   },
 };

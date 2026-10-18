@@ -6,7 +6,8 @@ export const name = 'create_order';
 
 export const config = {
   title: 'Create order',
-  description: 'Place an order for one or more products. Returns the order id and total in US dollars.',
+  description:
+    'Place an order for one or more products. Returns the order id and total in US dollars. Each call places a new order; do not retry blindly.',
   inputSchema: {
     items: z
       .array(z.object({ product_id: z.string(), quantity: z.number().int().min(1) }))

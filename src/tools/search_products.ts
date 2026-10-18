@@ -7,7 +7,13 @@ export const name = 'search_products';
 export const config = {
   title: 'Search products',
   description: 'Search the catalog by name or category (e.g. "laptop", "cable"). Prices are in US dollars.',
-  inputSchema: { query: z.string().describe('Words in the product name, or a category.') },
+  inputSchema: {
+    query: z
+      .string()
+      .describe(
+        'One phrase found in the product name (case-insensitive), or an exact category: laptop, monitor, cable, dock, keyboard. A multi-word query must appear in the name in that order.',
+      ),
+  },
   outputSchema: {
     items: z.array(
       z.object({

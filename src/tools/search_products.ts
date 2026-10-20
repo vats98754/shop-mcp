@@ -38,16 +38,27 @@ interface VendorProduct {
 }
 
 export async function handler(args: { query: string }, vendor: VendorClient) {
-  const res = await vendor.get(`/products?q=${encodeURIComponent(args.query)}`);
-  const body = res.body as { items: VendorProduct[]; total: number };
-  // Since vendor API 2026-10-01, prices are sent in minor units (cents).
-  const priceScale = (res.headers.get('vendor-api-version') ?? '') >= '2026-10-01' ? 100 : 1;
-  const items = body.items.map((p) => ({
-    id: p.id,
-    name: p.name,
-    category: p.category,
-    price: p.price / priceScale,
-    currency: p.currency,
-  }));
-  return ok({ items, count: items.length, total: body.total });
+  const path = `/products?q=${encodeURIComponent(args.query)}`;
+  const items: { id: string; name: string; category: string; price: number; currency: string }[] = [];
+  let total = 0;
+  let cursor: string | null | undefined;
+  // Since vendor API 2026-10-01, results are paginated; follow next_cursor to the end.
+  do {
+    const res = await vendor.get(cursor ? `${path}&cursor=${encodeURIComponent(cursor)}` : path);
+    const body = res.body as { items: VendorProduct[]; total: number; next_cursor?: string | null };
+    // Since vendor API 2026-10-01, prices are sent in minor units (cents).
+    const priceScale = (res.headers.get('vendor-api-version') ?? '') >= '2026-10-01' ? 100 : 1;
+    for (const p of body.items) {
+      items.push({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: p.price / priceScale,
+        currency: p.currency,
+      });
+    }
+    total = body.total;
+    cursor = body.next_cursor;
+  } while (cursor);
+  return ok({ items, count: items.length, total });
 }

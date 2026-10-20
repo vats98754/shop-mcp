@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { fail, ok } from '../result.ts';
 import type { VendorClient } from '../vendor.ts';
@@ -31,7 +32,8 @@ export async function handler(
   args: { items: { product_id: string; quantity: number }[] },
   vendor: VendorClient,
 ) {
-  const res = await vendor.post('/orders', { items: args.items });
+  // Since 2026-10-01 the vendor only persists orders placed with an Idempotency-Key.
+  const res = await vendor.post('/orders', { items: args.items }, { 'Idempotency-Key': randomUUID() });
   if (res.status !== 200) {
     const msg = (res.body as { message?: string } | null)?.message ?? `HTTP ${res.status}`;
     return fail(`Order rejected: ${msg}`);

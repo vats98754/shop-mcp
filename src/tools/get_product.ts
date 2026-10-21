@@ -23,6 +23,8 @@ interface VendorProduct {
   name: string;
   category: string;
   price?: number | null;
+  /** Vendor 2026-10-01 renamed `price` to `unit_amount` (same unit, US dollars). */
+  unit_amount?: number | null;
   currency: string;
   stock: number;
 }
@@ -35,7 +37,7 @@ export async function handler(args: { id: string }, vendor: VendorClient) {
     id: p.id,
     name: p.name,
     category: p.category,
-    price: p.price ?? null,
+    price: p.price ?? p.unit_amount ?? null,
     currency: p.currency,
     in_stock: p.stock > 0,
   });
